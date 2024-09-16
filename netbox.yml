@@ -1,8 +1,29 @@
 ---
-- name: role verbinden
+- name: Rufe die Netbox Rolle auf
   hosts: localhost
   gather_facts: no
   tasks:
+  - ansible.builtin.assert:
+      that:
+        - action is defined
+        - action in ["add", "delete"]
+      fail_msg: "Keine Aktion definiert oder unbekannte Aktion"
+  - name: "Check Delete IP Parameter(s) are set"
+    when: action == "delete"
+    ansible.builtin.assert:
+      that:
+        - ip_address_to_delete is defined
+      fail_msg: "Keine IP Adresse zum Löschen definiert"
+  - name: "Check add IP Parameter(s) are set"
+    when: action == "add"
+    ansible.builtin.assert:
+      that:
+        - vlan is defined
+        - fqdn is defined
+        - functiongroup is defined
+      fail_msg: "vlan, fqdn und/oder functiongroup nicht definiert"
+
   - name: "Ruf Rolle auf"
     include_role:
       name: "netbox"
+      tasks_from: "{{ action }}"

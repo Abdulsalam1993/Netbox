@@ -1,6 +1,10 @@
 ---
-- name: "Ruf Rolle auf"
-  include_tasks: "git_neu.yml"
+- name: debug
+  debug:
+    msg: "{{ netbox_token }}"
 
-- name: "Ruf Rolle auf"
-  include_tasks: "delete.yml"
+# - name: "Ruf Rolle auf"
+#   include_tasks: "add.yml"
+
+# - name: "Ruf Rolle auf"
+#   include_tasks: "delete.yml"

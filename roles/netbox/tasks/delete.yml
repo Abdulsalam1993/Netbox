@@ -2,9 +2,6 @@
 # Löschen einer IP
 #   Eingabevariablen: ip_address_to_delete, dns_name_to_check (optional)
 #   Rückgabevariablen: keine
-- name: "lese mal von AWS-parameterstor"
-  set_fact:
-    netbox_token: "{{ lookup('file', '/home/aalhomsi/repos/Netbox/netbox_token.yml') }}"
 - name: "GitIP"
   delegate_to: localhost
   uri:
@@ -46,4 +43,4 @@
       Authorization: "Token {{ netbox_token }}"
     status_code: 204
     return_content: false
-  changed_when: true     
+  changed_when: true

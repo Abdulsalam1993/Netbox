@@ -6,7 +6,6 @@
 
 - name: "Read from AWS-Parameterstore"
   set_fact:
-    netbox_token: "{{ lookup('file', '/home/aalhomsi/repos/Netbox/netbox_token.yml') }}"
     vlan_first: "{{ vlan.split('/') | first }}"
     it_system: "{{ functiongroup.split('.')[0:2] | join('.') }}"
 
