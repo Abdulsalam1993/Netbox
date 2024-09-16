@@ -1,0 +1,5 @@
+
+vlan: "988/1"         
+functiongroup: "md.MWSABetrieb.dev.app"
+fqdn: "metaluna-netbox-d11.mobilcom.de"
+ip_address_to_delete: "{{ added_ip | default('10.196.71.134') }}"

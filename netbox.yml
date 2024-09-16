@@ -1,0 +1,8 @@
+---
+- name: role verbinden
+  hosts: localhost
+  gather_facts: no
+  tasks:
+  - name: "Ruf Rolle auf"
+    include_role:
+      name: "netbox"

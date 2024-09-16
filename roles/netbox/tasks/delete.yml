@@ -1,0 +1,49 @@
+---
+# Löschen einer IP
+#   Eingabevariablen: ip_address_to_delete, dns_name_to_check (optional)
+#   Rückgabevariablen: keine
+- name: "lese mal von AWS-parameterstor"
+  set_fact:
+    netbox_token: "{{ lookup('file', '/home/aalhomsi/repos/Netbox/netbox_token.yml') }}"
+- name: "GitIP"
+  delegate_to: localhost
+  uri:
+    url: "https://netbox.freenet-group.de/api/ipam/ip-addresses/?address={{ ip_address_to_delete }}&fields=id,address,dns_name"
+    headers:
+      Authorization: "Token {{ netbox_token }}"
+    status_code: 200
+    return_content: false
+  register: result
+- name: "No IP found"
+  when: result['json']['count'] == 0
+  meta: end_host
+- name: "Check"
+  assert:
+    that:
+      - result['json']['count'] == 1
+      - result['json']['results'][0]['address'].startswith(ip_address_to_delete + "/")
+- name: "gefundene IP"
+  debug:
+    msg: "IP: {{ result['json']['results'][0]['address'] }} ; dns_name: {{ result['json']['results'][0]['dns_name'] }} ; ID: {{ result['json']['results'][0]['id'] }}"
+- name: "Check dns_name"
+  when: dns_name_to_check is defined
+  assert:
+    that:
+      - result['json']['results'][0]['dns_name'] == dns_name_to_check
+    fail_msg: "DNS-Namen stimmen nicht überein: {{ result['json']['results'][0]['dns_name'] }} gefunden; {{ dns_name_to_check }} erwartet"
+    success_msg: "DNS-Namen passen zusammen."
+
+- name: "Get IP-ID"
+  set_fact:
+    ip_id: "{{ result['json']['results'][0]['id'] }}"
+
+- name: "IP löschen"
+  delegate_to: "localhost"
+  uri:
+    url: "https://netbox.freenet-group.de/api/ipam/ip-addresses/{{ ip_id }}/"
+    method: "DELETE"
+    headers:
+      Authorization: "Token {{ netbox_token }}"
+    status_code: 204
+    return_content: false
+  changed_when: true     

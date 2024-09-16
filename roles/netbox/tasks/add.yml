@@ -1,0 +1,106 @@
+---
+# Anlegen einer neuen IP
+#   Eingabevariablen:  vlan, functiongroup und fqdn
+#   Rückgabevariablen: added_ip und prefix_net
+
+
+- name: "Read from AWS-Parameterstore"
+  set_fact:
+    netbox_token: "{{ lookup('file', '/home/aalhomsi/repos/Netbox/netbox_token.yml') }}"
+    vlan_first: "{{ vlan.split('/') | first }}"
+    it_system: "{{ functiongroup.split('.')[0:2] | join('.') }}"
+
+- name: "Get Prefix"
+  delegate_to: "localhost"
+  uri:
+    url: "https://netbox.freenet-group.de/api/ipam/prefixes/?vlan_vid={{ vlan_first }}&fields=id,prefix,vlan"
+    headers:
+      Authorization: "Token {{ netbox_token }}"
+    status_code: 200
+    return_content: false
+  register: result_prefix
+
+- name: "No Prefix found"
+  when: result_prefix['json']['count'] == 0
+  fail:
+    msg: "keinen Prefix in der Netbox gefunden"
+
+- name: "Check"
+  assert:
+    that:
+      - result_prefix['json']['count'] == 1
+      - result_prefix['json']['results'][0]['vlan']['name'].startswith(vlan + "_")
+
+- name: "Gefundener Prefix"
+  debug:
+    msg: "Prefix: {{ result_prefix['json']['results'][0]['prefix'] }} ; VLAN: {{ result_prefix['json']['results'][0]['vlan']['display'] }} ; ID: {{ result_prefix['json']['results'][0]['id'] }}"
+
+- name: "Get Prefix-ID"
+  set_fact:
+    prefix_id: "{{ result_prefix['json']['results'][0]['id'] }}"
+    prefix_net: "{{ result_prefix['json']['results'][0]['prefix'] }}"
+
+- name: "Get Tenant"
+  delegate_to: "localhost"
+  uri:
+    url: "https://netbox.freenet-group.de/api/tenancy/tenants/?cf_it_system={{ it_system }}&fields=id,name"
+    headers:
+      Authorization: "Token {{ netbox_token }}"
+    status_code: 200
+    return_content: false
+  register: result_tenant
+
+- name: "No Tenant found"
+  when: result_tenant['json']['count'] == 0
+  fail:
+    msg: "keinen Tenant in der Netbox gefunden"
+
+- name: "Check"
+  assert:
+    that:
+      - result_tenant['json']['count'] == 1
+
+- name: "Gefundener Tenant"
+  debug:
+    msg: "Tenant: {{ result_tenant['json']['results'][0]['name'] }} ; ID: {{ result_tenant['json']['results'][0]['id'] }}"
+
+- name: "Get Tenant-ID"
+  set_fact:
+    tenant_id: "{{ result_tenant['json']['results'][0]['id'] }}"
+
+- name: "Get new IP"
+  delegate_to: "localhost"
+  uri:
+    url: "https://netbox.freenet-group.de/api/ipam/prefixes/{{ prefix_id }}/available-ips/"
+    method: "POST"
+    headers:
+      Authorization: "Token {{ netbox_token }}"
+    status_code: 201
+    return_content: false
+    body_format: "json"
+    body:
+      - description: "{{ fqdn }}"
+        tenant: "{{ tenant_id }}"
+        dns_name: "{{ fqdn }}"
+  changed_when: true
+  register: result_ip
+
+- name: "No IP found"
+  when: result_ip['json'] | count == 0
+  fail:
+    msg: "keinen IP zurückbekommen"
+
+- name: "Check"
+  assert:
+    that:
+      - result_ip['json'] | count == 1
+      - result_ip['json'][0]['description'] == fqdn
+      - result_ip['json'][0]['dns_name'] == fqdn
+
+- name: "Gelieferte IP"
+  debug:
+    msg: "IP: {{ result_ip['json'][0]['address'] }}"
+
+- name: "Get Tenant-ID"
+  set_fact:
+    added_ip: "{{ result_ip['json'][0]['address'].split('/')[0] }}"

@@ -1,0 +1,6 @@
+---
+- name: "Ruf Rolle auf"
+  include_tasks: "git_neu.yml"
+
+- name: "Ruf Rolle auf"
+  include_tasks: "delete.yml"
